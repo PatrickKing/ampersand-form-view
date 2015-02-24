@@ -20,18 +20,28 @@ var getView = function () {
         fields: function () {
             return [
                 // TODO: add an AmpersandCheckboxView.
-                new AmpersandInputView({
-                    name: 'text',
-                    type: 'text',
-                    value: 'Original value'
-                }),
-                new AmpersandInputView({
-                    name: 'textarea',
-                    type: 'textarea',
-                    value: 'Original value'
-                })
+                {
+                  hook: 'input_one',
+                  field_view: new AmpersandInputView({
+                                    name: 'text',
+                                    type: 'text',
+                                    value: 'Original value'
+                                })
+                },
+                { 
+                  hook: 'input_two',
+                  field_view: new AmpersandInputView({
+                                    name: 'textarea',
+                                    type: 'textarea',
+                                    value: 'Original value'
+                                })
+                }
             ];
-        }
+        },
+        template: "<form>" + 
+                  "<div data-hook='input_one'></div>" + 
+                  "<div data-hook='input_two'></div>" + 
+                  "</form>"
     });
 
     // Create a View with a nested FormView.

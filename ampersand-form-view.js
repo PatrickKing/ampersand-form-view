@@ -3,54 +3,70 @@ var BBEvents = require('backbone-events-standalone');
 var isFunction = require('amp-is-function');
 var extend = require('amp-extend');
 var result = require('amp-result');
+var View = require('ampersand-view')
+
+module.exports = View.extend({
+
+    initialize: function(opts) {
+
+      opts = opts || {};
+
+      this.validCallback = opts.validCallback || this.validCallback || function () {};
+      this.submitCallback = opts.submitCallback || this.submitCallback || function () {};
+
+      if (opts.data) this.data = opts.data;
+      if (opts.model) this.model = opts.model;
+
+      this.clean = opts.clean || function (res) { return res; };
+      this.valid = false;
+      this.preventDefault = opts.preventDefault === false ? false : true;
+
+      // storage for our fields
+      this._fieldViews = {};
+      this._fieldViewsArray = [];
+
+      // add all our fields
+      this.render();
+
+      (opts.fields || result(this, 'fields') || []).forEach(this.addField.bind(this));
+
+      this.checkValid(true);
+
+    },
+
+    props: {
+      rendered_template: ['boolean', true, false]
+    },
+    derived: {
+        // Overrides ampersand-view
+        // We have only rendered if we both have an element, and have populated it with our template
+        rendered: {
+            deps: ['el', 'rendered_template'],
+            fn: function () {
+                return !!this.el && this.rendered_template;
+            }
+        }
+    },
 
 
-function FormView(opts) {
-    opts = opts || {};
-
-    this.el = opts.el;
-    this.validCallback = opts.validCallback || this.validCallback || function () {};
-    this.submitCallback = opts.submitCallback || this.submitCallback || function () {};
-
-    if (opts.data) this.data = opts.data;
-    if (opts.model) this.model = opts.model;
-
-    this.clean = opts.clean || function (res) { return res; };
-    this.valid = false;
-    this.preventDefault = opts.preventDefault === false ? false : true;
-    this.autoAppend = opts.autoAppend === false ? false : true;
-
-    // storage for our fields
-    this._fieldViews = {};
-    this._fieldViewsArray = [];
-
-    // add all our fields
-    this.render();
-
-    (opts.fields || result(this, 'fields') || []).forEach(this.addField.bind(this));
-
-    if (this.initialize) this.initialize.apply(this, arguments);
-
-    //defer till after returning from initialize
-    setTimeout(function () {
-        this.checkValid(true);
-    }.bind(this), 0);
-}
-
-
-extend(FormView.prototype, BBEvents, {
+    // TODO do I need these?
     data: null,
-    model: null,
+    // model: null,
     fields: null,
 
-    addField: function (fieldView) {
+    template: "<form><p>You should pass a template to your AmpersandFormView.</p></form>",
+
+    addField: function (fieldDefinition) {
+        var fieldView = fieldDefinition.field_view;
+
         this._fieldViews[fieldView.name] = fieldView;
         this._fieldViewsArray.push(fieldView);
-        if (this.fieldContainerEl) {
-            fieldView.parent = this;
-            fieldView.render();
-            this.fieldContainerEl.appendChild(fieldView.el);
-        }
+
+        fieldView.parent = this;
+        fieldView.render();
+        var element = this.queryByHook(fieldDefinition.hook);
+        element.appendChild(fieldView.el);
+
     },
 
     removeField: function (name) {
@@ -145,30 +161,27 @@ extend(FormView.prototype, BBEvents, {
             }
         });
     },
-
+    
     render: function () {
         if (this.rendered) return;
-        if (!this.el) {
-            this.el = document.createElement('form');
-        }
-        if (this.autoAppend) {
-            this.fieldContainerEl = this.el.querySelector('[data-hook~=field-container]') || this.el;
-        }
+        this.renderWithTemplate()
+
+        // if (!this.el) {
+        //     this.el = document.createElement('form');
+        // }
+        // if (this.autoAppend) {
+        //     this.fieldContainerEl = this.el.querySelector('[data-hook~=field-container]') || this.el;
+        // }
+
         this.handleSubmit = this.handleSubmit.bind(this);
         this.el.addEventListener('submit', this.handleSubmit, false);
-        this.rendered = true;
+        this.rendered_template = true; // TODO you're sure that this is inherited? 
     }
+    
 });
 
-FormView.extend = function (obj) {
-    var child = function () {
-       FormView.apply(this, arguments);
-    };
 
-    extend(child.prototype, FormView.prototype);
-    extend(child.prototype, obj);
 
-    return child;
-};
 
-module.exports = FormView;
+
+
